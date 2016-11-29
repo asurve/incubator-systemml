@@ -64,6 +64,53 @@ trait HasRegParam extends Params {
   setDefault(regParam, 0.000001)
   final def getRegParam: Double = $(regParam)
 }
+trait HasImpurity extends Params {
+  final val impurity: Param[String] = new Param[String](this, "impurity", "Impurity measure: entropy or Gini " + "(the default)")
+  setDefault(impurity, "Gini")
+  final def getImpurity: String = $(impurity)
+}
+trait HasBins extends Params {
+  final val bins: Param[Int] = new Param[Int](this,"bins", "Number of equiheight bins per scale feature to choose " + "thresholds")
+  setDefault(bins, 20)
+  final def getBins: Int = $(bins)
+}
+trait HasDepth extends Params {
+  final val depth: Param[Int] = new Param[Int](this,"depth", "Maximum depth of the learned tree")
+  setDefault(depth, 25)
+  final def getDepth: Int = $(depth)
+}
+trait HasNumLeaf extends Params {
+  final val numLeaf: Param[Int] = new Param[Int](this,"num_leaf", "Number of samples when splitting stops and a " + "leaf node is added")
+  setDefault(numLeaf, 10)
+  final def getNumLeaf: Int = $(numLeaf)
+}
+trait HasNumSamples extends Params {
+  final val numSamples: Param[Int] = new Param[Int](this,"num_samples", "Number of samples at which point we switch " + "to in-memory subtree building")
+  setDefault(numSamples, 3000)
+  final def getNumSamples: Int = $(numSamples)
+}
+trait HasRCol extends Params {
+  final val rCol: Param[String] = new Param[String](this,"rCol", "Name of the column that has categorical data indices in features vector")
+  setDefault(rCol, "catIndices")
+  final def getRCol: String = $(rCol)
+}
+trait HasNumTrees extends Params {
+  final val numTrees: Param[Int] = new Param[Int](this,"num_trees", "Number of trees to be learned in the random forest model")
+  setDefault(numTrees, 10)
+  final def getNumTrees: Int = $(numTrees)
+}
+trait HasSubSampleRate extends Params {
+  final val subSampleRate : DoubleParam = new DoubleParam(this,"subsamp_rate",
+    "Parameter controlling the size of each tree in the forest; samples are selected from a Poisson distribution with parameter subsamp_rate (the default value is 1.0)")
+  setDefault(subSampleRate , 1.0)
+  final def getSubSampleRate: Double = $(subSampleRate)
+}
+trait HasFeatureSubset extends Params {
+  final val featureSubset : DoubleParam = new DoubleParam(this,"feature_subset",
+    "Parameter that controls the number of feature used as candidates for splitting at each tree node as a power of number of features in the dataset; by default square root of features (i.e., feature_subset = 0.5) are used at each tree node ")
+  setDefault(featureSubset , 0.5)
+  final def getFeatureSubset: Double = $(featureSubset)
+}
 
 trait BaseSystemMLEstimator {
   

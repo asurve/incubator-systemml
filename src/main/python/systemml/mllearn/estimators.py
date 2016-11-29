@@ -19,7 +19,7 @@
 #
 #-------------------------------------------------------------
 
-__all__ = ['LinearRegression', 'LogisticRegression', 'SVM', 'NaiveBayes']
+__all__ = ['LinearRegression', 'LogisticRegression', 'SVM', 'NaiveBayes', 'DecisionTree', 'RandomForest']
 
 import numpy as np
 from pyspark.ml import Estimator
@@ -492,5 +492,86 @@ class NaiveBayes(BaseSystemMLClassifier):
         createJavaObject(self.sc, 'dummy')
         self.estimator = self.sc._jvm.org.apache.sysml.api.ml.NaiveBayes(self.uid, self.sc._jsc.sc())
         self.estimator.setLaplace(laplace)
+        self.transferUsingDF = transferUsingDF
+        self.setOutputRawPredictionsToFalse = False
+
+
+
+class DecisionTree(BaseSystemMLClassifier):
+    """
+    Performs Decision Tree.
+
+
+    """
+
+    def __init__(self, sqlCtx, impurity="Gini", bins=20, depth=25, numLeaf=10, numSamples=3000, rCol="catIndices", transferUsingDF=False):
+        """
+        Performs Decision Tree.
+
+        Parameters
+        ----------
+        sqlCtx: PySpark SQLContext
+        impurity: Impurity measure: entropy or Gini(Default)
+        bins: Number of equiheight bins per scale feature to choose thresholds
+        depth:  Maximum depth of the learned tree
+        numLeaf: Number of samples when splitting stops and a leaf node is added
+        numSamples: Number of samples at which point we switch to in-memory subtree building
+        rCol: "Name of the column that has categorical data indices in features vector
+
+        """
+        self.sqlCtx = sqlCtx
+        self.sc = sqlCtx._sc
+        self.uid = "decisionTree"
+        createJavaObject(self.sc, 'dummy')
+        self.estimator = self.sc._jvm.org.apache.sysml.api.ml.DecisionTree(self.uid, self.sc._jsc.sc())
+        self.estimator.setImpurity(impurity)
+        self.estimator.setBins(bins)
+        self.estimator.setDepth(depth)
+        self.estimator.setNumLeaf(numLeaf)
+        self.estimator.setRCol(rCol)
+        self.estimator.setNumSamples(numSamples)
+        self.transferUsingDF = transferUsingDF
+        self.setOutputRawPredictionsToFalse = False
+
+
+
+class RandomForest(BaseSystemMLClassifier):
+    """
+
+    Performs Random Forest.
+
+    """
+
+    def __init__(self, sqlCtx, impurity="Gini", bins=20, depth=25, numLeaf=10, numSamples=3000, numTrees=10,
+                    subSampleRate=1.0, featureSubset=0.5, transferUsingDF=False):
+        """
+        Performs Random Forest.
+
+        Parameters
+        ----------
+        sqlCtx: PySpark SQLContext
+        impurity: Impurity measure: entropy or Gini(Default)
+        bins: Number of equiheight bins per scale feature to choose thresholds
+        depth:  Maximum depth of the learned tree
+        numLeaf: Number of samples when splitting stops and a leaf node is added
+        numSamples: Number of samples at which point we switch to in-memory subtree building
+        numTrees: Number of trees to be learned in the random forest model
+        subSampleRate: Parameter controlling the size of each tree in the forest; samples are selected from a Poisson distribution with parameter subsamp_rate (the default value is 1.0)
+        featureSubset: Parameter that controls the number of feature used as candidates for splitting at each tree node as a power of number of features in the dataset; by default square root of features (i.e., feature_subset = 0.5) are used at each tree node
+
+        """
+        self.sqlCtx = sqlCtx
+        self.sc = sqlCtx._sc
+        self.uid = "randomForest"
+        createJavaObject(self.sc, 'dummy')
+        self.estimator = self.sc._jvm.org.apache.sysml.api.ml.RandomForest(self.uid, self.sc._jsc.sc())
+        self.estimator.setImpurity(impurity)
+        self.estimator.setBins(bins)
+        self.estimator.setDepth(depth)
+        self.estimator.setNumLeaf(numLeaf)
+        self.estimator.setNumSamples(numSamples)
+        self.estimator.setNumTrees(numTrees)
+        self.estimator.setSubSampleRate(subSampleRate)
+        self.estimator.setFeatureSubset(featureSubset)
         self.transferUsingDF = transferUsingDF
         self.setOutputRawPredictionsToFalse = False

@@ -41,7 +41,7 @@ from sklearn import datasets, metrics, neighbors
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from systemml.mllearn import LinearRegression, LogisticRegression, NaiveBayes, SVM
+from systemml.mllearn import LinearRegression, LogisticRegression, NaiveBayes, SVM, DecisionTree, RandomForest
 
 sc = SparkContext()
 sqlCtx = SQLContext(sc)
@@ -49,6 +49,7 @@ sqlCtx = SQLContext(sc)
 # Currently not integrated with JUnit test
 # ~/spark-1.6.1-scala-2.11/bin/spark-submit --master local[*] --driver-class-path SystemML.jar test.py
 class TestMLLearn(unittest.TestCase):
+
     def test_logistic(self):
         digits = datasets.load_digits()
         X_digits = digits.data
@@ -146,6 +147,71 @@ class TestMLLearn(unittest.TestCase):
     #    score = metrics.f1_score(newsgroups_test.target, pred, average='weighted')
     #    self.failUnless(score > 0.8)
 
+    def testDecisionTreeMLPipeline(self):
+        training = sqlCtx.createDataFrame([
+            ("a b c d e spark", 1.0),
+            ("b d", 2.0),
+            ("spark f g h", 1.0),
+            ("hadoop mapreduce", 2.0),
+            ("b spark who", 1.0),
+            ("g d a y", 2.0),
+            ("spark fly", 1.0),
+            ("was mapreduce", 2.0),
+            ("e spark program", 1.0),
+            ("a e c l", 2.0),
+            ("spark compile", 1.0),
+            ("hadoop software", 2.0)
+            ], ["text", "label"])
+        tokenizer = Tokenizer(inputCol="text", outputCol="words")
+        hashingTF = HashingTF(inputCol="words", outputCol="features", numFeatures=20)
+        lr = DecisionTree(sqlCtx)
+        pipeline = Pipeline(stages=[tokenizer, hashingTF, lr])
+        model = pipeline.fit(training)
+
+        test = sqlCtx.createDataFrame([
+            ("spark i j k", 1.0),
+            ("l m n", 2.0),
+            ("mapreduce spark", 1.0),
+            ("apache hadoop", 2.0)], ["text", "label"])
+        result = model.transform(test)
+        predictionAndLabels = result.select("prediction", "label")
+        from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+        evaluator = MulticlassClassificationEvaluator()
+        score = evaluator.evaluate(predictionAndLabels)
+        self.failUnless(score == 1.0)
+
+    def testRandomForestMLPipeline(self):
+        training = sqlCtx.createDataFrame([
+            ("a b c d e spark", 1.0),
+            ("b d", 2.0),
+            ("spark f g h", 1.0),
+            ("hadoop mapreduce", 2.0),
+            ("b spark who", 1.0),
+            ("g d a y", 2.0),
+            ("spark fly", 1.0),
+            ("was mapreduce", 2.0),
+            ("e spark program", 1.0),
+            ("a e c l", 2.0),
+            ("spark compile", 1.0),
+            ("hadoop software", 2.0)
+            ], ["text", "label"])
+        tokenizer = Tokenizer(inputCol="text", outputCol="words")
+        hashingTF = HashingTF(inputCol="words", outputCol="features", numFeatures=20)
+        lr = RandomForest(sqlCtx)
+        pipeline = Pipeline(stages=[tokenizer, hashingTF, lr])
+        model = pipeline.fit(training)
+
+        test = sqlCtx.createDataFrame([
+            ("spark i j k", 1.0),
+            ("l m n", 2.0),
+            ("mapreduce spark", 1.0),
+            ("apache hadoop", 2.0)], ["text", "label"])
+        result = model.transform(test)
+        predictionAndLabels = result.select("prediction", "label")
+        from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+        evaluator = MulticlassClassificationEvaluator()
+        score = evaluator.evaluate(predictionAndLabels)
+        self.failUnless(score == 1.0)
 
 if __name__ == '__main__':
     unittest.main()
