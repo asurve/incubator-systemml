@@ -23,12 +23,17 @@ import org.apache.spark.rdd.RDD
 import java.io.File
 
 import org.apache.spark.SparkContext
+import org.apache.spark.api.java.JavaPairRDD
 import org.apache.spark.ml.{Estimator, Model, Pipeline}
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.ml.param._
-import org.apache.sysml.runtime.matrix.data.MatrixBlock
+import org.apache.sysml.runtime.matrix.data.{InputInfo, MatrixBlock, MatrixIndexes}
 import org.apache.sysml.api.mlcontext._
 import org.apache.sysml.api.mlcontext.ScriptFactory._
+import org.apache.sysml.runtime.instructions.spark.utils.RDDConverterUtils
+import org.apache.sysml.runtime.io.MatrixReader
+import org.apache.sysml.runtime.io.MatrixReaderFactory
+import org.apache.sysml.runtime.matrix.MatrixCharacteristics
 
 object RandomForest {
   final val scriptPath = "scripts" + File.separator + "algorithms" + File.separator + "random-forest.dml"
@@ -97,14 +102,25 @@ class RandomForestModel(override val uid: String)
   }
   
   def getPredictionScript(mloutput: MLResults, isSingleNode:Boolean): (Script, String)  = {
+
+    val M = mloutput.getBinaryBlockMatrix("M")
+
     val script = dml(ScriptsUtils.getDMLScript(RandomForestModel.scriptPath))
       .in("$X", " ")
       .in("$M", " ")
       .in("$P", " ")
       .out("Y_predicted")
 
-    val YPredicted = mloutput.getDataFrame("Y_predicted")
+    if(isSingleNode)
+      script.in("M", M.getMatrixBlock, M.getMatrixMetadata)
+    else
+      script.in("M", M.getBinaryBlocks, M.getMatrixMetadata)
+
     (script, "X")
+
+
+//    val YPredicted = mloutput.getDataFrame("Y_predicted")
+
   }
 
   def transform(X: MatrixBlock): MatrixBlock = baseTransform(X, mloutput, sc, "Y_predicted")
@@ -124,6 +140,7 @@ object RandomForestExample {
   import org.apache.spark.sql.types._
   import org.apache.spark.mllib.linalg.Vectors
   import org.apache.spark.mllib.regression.LabeledPoint
+  import org.apache.sysml.api.ml.RandomForest
 
   def main(args: Array[String]) = {
     val sparkConf: SparkConf = new SparkConf();
@@ -153,7 +170,7 @@ object RandomForestExample {
   }
 }
 */
-
+/*
 object RandomForestExample {
 
   import org.apache.spark.{SparkConf, SparkContext}
@@ -176,5 +193,32 @@ object RandomForestExample {
     val lrmodel = lr.fit(trainingData)
     lrmodel.transform(testData).show
 
+  }
+}
+*/
+
+object RandomForestExample {
+
+  import org.apache.spark.{SparkConf, SparkContext}
+  import org.apache.spark.mllib.util.MLUtils
+
+  def main(args: Array[String]) = {
+    val sparkConf: SparkConf = new SparkConf()
+    val sc: SparkContext = new SparkContext("local", "TestLocal", sparkConf)
+    val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+    import sqlContext.implicits._
+
+    val reader1 = MatrixReaderFactory.createMatrixReader(InputInfo.TextCellInputInfo)
+    val fPathX = "src" + File.separator + "test" + File.separator + "resources" + File.separator + "XTemp"
+    val mb1 = reader1.readMatrixFromHDFS(fPathX,70,600,-1,-1,-1)
+    val reader2 = MatrixReaderFactory.createMatrixReader(InputInfo.TextCellInputInfo)
+    val fPathy = "src" + File.separator + "test" + File.separator + "resources" + File.separator + "yTemp"
+    val mb2 = reader2.readMatrixFromHDFS(fPathy,70,10,-1,-1,-1)
+
+
+    val lr = new RandomForest("randomForest", sc)
+    val lrmodel = lr.fit(mb1, mb2)
+    lrmodel.transform(mb1).print()
   }
 }
